@@ -83,7 +83,7 @@ def min_max_cluster_dict(cluster_data):
 
 #below is a marker cluster map of the data 
 def marker_cluster_map(file_path, zoom_start_n = 13):
-    m_mc = folium.Map(location = [41.92, -87.66],tiles = 'cartodbpositron', zoom_start = zoom_start_n)
+    m_mc = folium.Map(location = [41.92, -87.66],tiles = 'openstreetmap', zoom_start = zoom_start_n)
 
     mc = MarkerCluster()
     df = pd.read_csv(file_path) # path file 
@@ -96,12 +96,13 @@ def marker_cluster_map(file_path, zoom_start_n = 13):
     for idx, row in X.iterrows():
         mc.add_child(Marker([row['LATITUDE'],row['LONGITUDE']]))
     m_mc.add_child(mc)
-
-    m_mc
+    #change file path below and unhash to save 
+    #m_mc.save(r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.html")
+    return m_mc
 
 # below is a heat map of the original data    
 def heat_map(file_path, zoom_start_n =14, r =14):
-    m_hm = folium.Map(location = [41.92, -87.66],tiles = 'cartodbpositron', zoom_start = zoom_start_n)
+    m_hm = folium.Map(location = [41.92, -87.66],tiles = 'openstreetmap', zoom_start = zoom_start_n)
     df = pd.read_csv(file_path) # path file 
     df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
 
@@ -110,6 +111,10 @@ def heat_map(file_path, zoom_start_n =14, r =14):
     df = df.dropna(subset = ["LATITUDE", "LONGITUDE"]) #we drop rows with NaN in longitutde and latitude 
     X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
     HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = r).add_to(m_hm)
-    m_hm
+    #change file path below and unhash to save 
+    #m_hm.save(r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.html")
+    return m_hm
+
+ 
 #%%
 
