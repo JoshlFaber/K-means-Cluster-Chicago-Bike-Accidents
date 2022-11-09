@@ -8,6 +8,7 @@ from sklearn.cluster import KMeans
 import folium 
 from folium import Circle, Marker
 from folium.plugins import HeatMap, MarkerCluster
+import geopandas as gpd
 
 plt.style.use("seaborn-whitegrid")
 plt.rc("figure", autolayout=False)
@@ -60,6 +61,10 @@ def graph_cluster(cluster_data):
 
 
 path = r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.csv" ## change this to the file on your computer 
+bike_path = r"C:\Users\joshl\OneDrive\Desktop\CDOT_Bike_Routes_2014_1216.csv"
+full_bike_path = pd.read_csv(bike_path)
+divvy_chicago = r"C:\Users\joshl\OneDrive\Desktop\Divvy_Bicycle_Stations.csv"
+divvy_chicago_data = pd.read_csv(divvy_chicago)
 
 
 ## below produces a dictonary of the latitude a longitude of each cluster 
@@ -111,10 +116,62 @@ def heat_map(file_path, zoom_start_n =14, r =14):
     df = df.dropna(subset = ["LATITUDE", "LONGITUDE"]) #we drop rows with NaN in longitutde and latitude 
     X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
     HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = r).add_to(m_hm)
+    
     #change file path below and unhash to save 
     #m_hm.save(r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.html")
     return m_hm
+def coordinates(string):
 
+    c_string = string.split('((')[1].split('))')[0].split(', ')
+    for i in range(len(c_string)):
+        c_string[i] = c_string[i].split(' ')
+        c_string[i][0] = c_string[i][0].replace('\'','')
+        c_string[i][1] = c_string[i][1].replace('\'','')
+        c_string[i][0] = c_string[i][0].replace('(','')
+        c_string[i][1] = c_string[i][1].replace('(','')
+        c_string[i][0] = c_string[i][0].replace(')','')
+        c_string[i][1] = c_string[i][1].replace(')','')
+        c_string[i][0], c_string[i][1] = float(c_string[i][1]), float(c_string[i][0])
+    #print(string)
+    return(c_string)
+
+def get_color(bike_lane_type):
+    if bike_lane_type == 'BIKE LANE':
+        return 'red'
+    elif bike_lane_type == 'SHARED-LANE':
+        return 'peru'
+    elif bike_lane_type == 'BUFFERED BIKE LANE':
+        return 'purple'
+    elif bike_lane_type == 'PROTECTED BIKE LANE':
+        return 'blue'
+    elif bike_lane_type == 'NEIGHBORHOOD GREENWAY':
+        return 'green'
  
+def heat_map_with_bike_paths_and_inservice_divvy_stations(bike_accidents_path = path, bike_file_path = full_bike_path, divvy_path = divvy_chicago_data):
+    my_map = folium.Map(location = [41.88451394892348, -87.68977117908742],tiles = 'openstreetmap', zoom_start =14)
+    for index,row in bike_file_path.iterrows():
+        
+        bike_coords = coordinates(bike_file_path['the_geom'].loc[index])
+        
+        folium.PolyLine(bike_coords,color = get_color(row['DISPLAYROU'])).add_to(my_map) #creates the bike lane lines
+    df = pd.read_csv(bike_accidents_path) # path file 
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+
+
+    df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
+    df = df.dropna(subset = ["LATITUDE", "LONGITUDE"]) #we drop rows with NaN in longitutde and latitude 
+    X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
+    HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = 14).add_to(my_map) 
+    divvy_in_service = divvy_path[divvy_path['Status'] == 'In Service'] # We add the divvy station data
+    for index,row in divvy_in_service.iterrows():
+        latitude = divvy_in_service['Latitude'].loc[index]
+        longitude = divvy_in_service['Longitude'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude]).add_to(my_map)
+    # unhash below to save 
+    #my_map.save(r"C:\Users\joshl\OneDrive\Desktop\heatmapdivvy.html")
+    return my_map
+
+
+
 #%%
 
