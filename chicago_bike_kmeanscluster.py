@@ -9,6 +9,15 @@ import folium
 from folium import Circle, Marker
 from folium.plugins import HeatMap, MarkerCluster
 import geopandas as gpd
+import requests
+import io
+
+#path = r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.csv" ## change this to the file on your computer 
+#bike_path = r"C:\Users\joshl\OneDrive\Desktop\CDOT_Bike_Routes_2014_1216.csv"
+#full_bike_path = pd.read_csv(bike_path)
+#divvy_chicago = r"C:\Users\joshl\OneDrive\Desktop\Divvy_Bicycle_Stations.csv"
+#divvy_chicago_data = pd.read_csv(divvy_chicago)
+
 
 plt.style.use("seaborn-whitegrid")
 plt.rc("figure", autolayout=False)
@@ -28,7 +37,7 @@ plt.rc(
 
 def produce_cluster(path_file,N_cluster =150,Density = 100):
     df = pd.read_csv(path_file) # path file 
-    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+    #df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
 
 
     df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
@@ -59,14 +68,21 @@ def graph_cluster(cluster_data):
         x="LONGITUDE", y="LATITUDE", hue="Cluster", data=cluster_data, height=10,
     )
 
+## Load in the CSV Files
+path_url = "https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/bike_crashes.csv?token=GHSAT0AAAAAAB24SBSNF2N352Y4THYPWDQSY3MDWMQ"
+path_dl = requests.get(path_url).content 
+path = io.StringIO(path_dl.decode('utf-8'))
+bike_path_url = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/CDOT_Bike_Routes_2014_1216.csv?raw=true'
 
-path = r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.csv" ## change this to the file on your computer 
-bike_path = r"C:\Users\joshl\OneDrive\Desktop\CDOT_Bike_Routes_2014_1216.csv"
-full_bike_path = pd.read_csv(bike_path)
-divvy_chicago = r"C:\Users\joshl\OneDrive\Desktop\Divvy_Bicycle_Stations.csv"
+bike_path = requests.get(bike_path_url).content
+full_bike_path = pd.read_csv(io.StringIO(bike_path.decode('utf-8')))
+divvy_chicago_url = "https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/Divvy_Bicycle_Stations.csv?token=GHSAT0AAAAAAB24SBSNRIXXW4N5UEX7KF3IY3MDWWQ"
+divvy_chicago_dl = requests.get(divvy_chicago_url).content
+divvy_chicago = io.StringIO(divvy_chicago_dl.decode('utf-8'))
 divvy_chicago_data = pd.read_csv(divvy_chicago)
+print(full_bike_path.head())
 
-
+## Below is code to extract the high density areas using K-means clustering
 ## below produces a dictonary of the latitude a longitude of each cluster 
 def long_lat_cluster_dict(cluster_data):
 
@@ -92,7 +108,7 @@ def marker_cluster_map(file_path, zoom_start_n = 13):
 
     mc = MarkerCluster()
     df = pd.read_csv(file_path) # path file 
-    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+    #df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
 
 
     df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
@@ -105,11 +121,12 @@ def marker_cluster_map(file_path, zoom_start_n = 13):
     #m_mc.save(r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.html")
     return m_mc
 
-# below is a heat map of the original data    
+## below is a heat map of the original data, we reuse this code again when bringing in the Divvy bike stations
+## and the bike lane data    
 def heat_map(file_path, zoom_start_n =14, r =14):
     m_hm = folium.Map(location = [41.92, -87.66],tiles = 'openstreetmap', zoom_start = zoom_start_n)
     df = pd.read_csv(file_path) # path file 
-    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+    #df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
 
 
     df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
@@ -120,6 +137,8 @@ def heat_map(file_path, zoom_start_n =14, r =14):
     #change file path below and unhash to save 
     #m_hm.save(r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.html")
     return m_hm
+
+# extracts the coordinates from the bke path CSV, needed cleaning
 def coordinates(string):
 
     c_string = string.split('((')[1].split('))')[0].split(', ')
@@ -135,6 +154,7 @@ def coordinates(string):
     #print(string)
     return(c_string)
 
+# color codes each bike lane type when producing the folium PolyLines
 def get_color(bike_lane_type):
     if bike_lane_type == 'BIKE LANE':
         return 'red'
@@ -147,15 +167,16 @@ def get_color(bike_lane_type):
     elif bike_lane_type == 'NEIGHBORHOOD GREENWAY':
         return 'green'
  
+# heat map with bike lane data (PolyLines) and with in-service divvy stations (Circles)  
 def heat_map_with_bike_paths_and_inservice_divvy_stations(bike_accidents_path = path, bike_file_path = full_bike_path, divvy_path = divvy_chicago_data):
     my_map = folium.Map(location = [41.88451394892348, -87.68977117908742],tiles = 'openstreetmap', zoom_start =14)
     for index,row in bike_file_path.iterrows():
-        
+
         bike_coords = coordinates(bike_file_path['the_geom'].loc[index])
-        
-        folium.PolyLine(bike_coords,color = get_color(row['DISPLAYROU'])).add_to(my_map) #creates the bike lane lines
-    df = pd.read_csv(bike_accidents_path) # path file 
-    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+        folium.PolyLine(bike_coords,color = get_color(row['DISPLAYROU'])).add_to(my_map) #creates the bike lane PolyLines
+
+    df = pd.read_csv(bike_accidents_path) # path file  for the heat map
+    #df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
 
 
     df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
@@ -171,7 +192,7 @@ def heat_map_with_bike_paths_and_inservice_divvy_stations(bike_accidents_path = 
     #my_map.save(r"C:\Users\joshl\OneDrive\Desktop\heatmapdivvy.html")
     return my_map
 
-
+#heat_map_with_bike_paths_and_inservice_divvy_stations()
 
 #%%
 
