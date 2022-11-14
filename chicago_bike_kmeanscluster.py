@@ -12,12 +12,11 @@ import geopandas as gpd
 import requests
 import io
 
-path = r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.csv" ## change this to the file on your computer 
-bike_path = r"C:\Users\joshl\OneDrive\Desktop\CDOT_Bike_Routes_2014_1216.csv"
-full_bike_path = pd.read_csv(bike_path)
-divvy_chicago = r"C:\Users\joshl\OneDrive\Desktop\Divvy_Bicycle_Stations.csv"
-divvy_chicago_data = pd.read_csv(divvy_chicago)
-
+path = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/bike_crashes.csv'
+bike_path_raw = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/CDOT_Bike_Routes_2014_1216.csv'
+full_bike_path = pd.read_csv(bike_path_raw)
+divvy_chicago_raw = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/Divvy_Bicycle_Stations.csv'
+divvy_chicago_data = pd.read_csv(divvy_chicago_raw)
 
 plt.style.use("seaborn-whitegrid")
 plt.rc("figure", autolayout=False)
@@ -30,9 +29,10 @@ plt.rc(
     titlepad=10,
     
 )
+
 # path_file is the file path for the chicago accident report CSV file 
 # N_cluster is total number of clusters we make 
-# the density is the lower bound for the number of accidents per cluster that we see in the output map 
+# the density is the lower bound for the number of accidents per cluster
 
 
 def produce_cluster(path_file,N_cluster =150,Density = 100):
@@ -179,7 +179,7 @@ def heat_map_with_bike_paths_and_inservice_divvy_stations(bike_accidents_path = 
     #my_map.save(r"C:\Users\joshl\OneDrive\Desktop\heatmapdivvy.html")
     return my_map
 
-heat_map_with_bike_paths_and_inservice_divvy_stations()
+#heat_map_with_bike_paths_and_inservice_divvy_stations() #unhash to show heat map
 
 #%%
 
