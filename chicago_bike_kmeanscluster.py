@@ -17,6 +17,13 @@ bike_path_raw = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Ch
 full_bike_path = pd.read_csv(bike_path_raw)
 divvy_chicago_raw = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/Divvy_Bicycle_Stations.csv'
 divvy_chicago_data = pd.read_csv(divvy_chicago_raw)
+bike_racks_raw = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/Bike_Racks.csv'
+bike_racks_data = pd.read_csv(bike_racks_raw)
+bike_racks_data = bike_racks_data.dropna(subset = ["Latitude", "Longitude"])
+active_business_licenses_raw = 'https://raw.githubusercontent.com/JoshlFaber/K-means-Cluster-Chicago-Bike-Accidents/main/Business_Licenses_-_Current_Active.csv'
+active_business_licenses_data = pd.read_csv(active_business_licenses_raw)
+active_business_licenses_data = active_business_licenses_data.dropna(subset = ["LATITUDE", "LONGITUDE"])
+
 
 plt.style.use("seaborn-whitegrid")
 plt.rc("figure", autolayout=False)
@@ -37,7 +44,7 @@ plt.rc(
 
 def produce_cluster(path_file,N_cluster =150,Density = 100):
     df = pd.read_csv(path_file) # path file 
-    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST'] #this line is needed when using the full chicago accident data set, we are not here but I wanted to keep the code general for future projects
 
 
     df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
@@ -95,7 +102,7 @@ def marker_cluster_map(file_path, zoom_start_n = 13):
 
     mc = MarkerCluster()
     df = pd.read_csv(file_path) # path file 
-    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST'] #this line is needed when using the full chicago accident data set, we are not here but I wanted to keep the code general for future projects
 
 
     df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
@@ -104,8 +111,7 @@ def marker_cluster_map(file_path, zoom_start_n = 13):
     for idx, row in X.iterrows():
         mc.add_child(Marker([row['LATITUDE'],row['LONGITUDE']]))
     m_mc.add_child(mc)
-    #change file path below and unhash to save 
-    #m_mc.save(r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.html")
+    
     return m_mc
 
 ## below is a heat map of the original data, we reuse this code again when bringing in the Divvy bike stations
@@ -113,7 +119,7 @@ def marker_cluster_map(file_path, zoom_start_n = 13):
 def heat_map(file_path, zoom_start_n =14, r =14):
     m_hm = folium.Map(location = [41.92, -87.66],tiles = 'openstreetmap', zoom_start = zoom_start_n)
     df = pd.read_csv(file_path) # path file 
-    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST'] #this line is needed when using the full chicago accident data set, we are not here but I wanted to keep the code general for future projects
 
 
     df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
@@ -121,8 +127,7 @@ def heat_map(file_path, zoom_start_n =14, r =14):
     X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
     HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = r).add_to(m_hm)
     
-    #change file path below and unhash to save 
-    #m_hm.save(r"C:\Users\joshl\OneDrive\Desktop\TrafficCrashes.html")
+    
     return m_hm
 
 # extracts the coordinates from the bke path CSV, needed cleaning
@@ -154,7 +159,7 @@ def get_color(bike_lane_type):
     elif bike_lane_type == 'NEIGHBORHOOD GREENWAY':
         return 'green'
  
-# heat map with bike lane data (PolyLines) and with in-service divvy stations (Circles)  
+# heat map with bike lane data (PolyLines) and with in-service divvy stations (Circles in blue)  
 def heat_map_with_bike_paths_and_inservice_divvy_stations(bike_accidents_path = path, bike_file_path = full_bike_path, divvy_path = divvy_chicago_data):
     my_map = folium.Map(location = [41.88451394892348, -87.68977117908742],tiles = 'openstreetmap', zoom_start =14)
     for index,row in bike_file_path.iterrows():
@@ -175,11 +180,122 @@ def heat_map_with_bike_paths_and_inservice_divvy_stations(bike_accidents_path = 
         latitude = divvy_in_service['Latitude'].loc[index]
         longitude = divvy_in_service['Longitude'].loc[index]
         folium.Circle(radius = 2, location = [latitude,longitude]).add_to(my_map)
-    # unhash below to save 
-    #my_map.save(r"C:\Users\joshl\OneDrive\Desktop\heatmapdivvy.html")
+    
     return my_map
 
-#heat_map_with_bike_paths_and_inservice_divvy_stations() #unhash to show heat map
+# heat map with bike lane data (PolyLines), in-service divvy stations (Circles in blue), and all bike racks (Circles in pink)  
+def heat_map_with_bike_paths_and_inservice_divvy_stations_bike_racks(bike_accidents_path = path, bike_file_path = full_bike_path, divvy_path = divvy_chicago_data, bike_racks_path = bike_racks_data):
+    my_map = folium.Map(location = [41.88451394892348, -87.68977117908742],tiles = 'openstreetmap', zoom_start =14)
+    for index,row in bike_file_path.iterrows():
+
+        bike_coords = coordinates(bike_file_path['the_geom'].loc[index])
+        folium.PolyLine(bike_coords,color = get_color(row['DISPLAYROU'])).add_to(my_map) #creates the bike lane PolyLines
+
+    df = pd.read_csv(bike_accidents_path) # path file  for the heat map
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+
+
+    df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
+    df = df.dropna(subset = ["LATITUDE", "LONGITUDE"]) #we drop rows with NaN in longitutde and latitude 
+    X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
+    HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = 14).add_to(my_map) 
+    divvy_in_service = divvy_path[divvy_path['Status'] == 'In Service'] # We add the divvy station data
+    for index,row in divvy_in_service.iterrows():
+        latitude = divvy_in_service['Latitude'].loc[index]
+        longitude = divvy_in_service['Longitude'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude]).add_to(my_map)
+
+    for index,row in bike_racks_path.iterrows():
+        latitude = bike_racks_path['Latitude'].loc[index]
+        longitude = bike_racks_path['Longitude'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude], color = 'pink').add_to(my_map)
+    
+    return my_map
+
+# heat map with bike lane data (PolyLines), and all bike racks (Circles in pink)    
+def heat_map_with_bike_paths_bike_racks(bike_accidents_path = path, bike_file_path = full_bike_path, bike_racks_path = bike_racks_data):
+    my_map = folium.Map(location = [41.88451394892348, -87.68977117908742],tiles = 'openstreetmap', zoom_start =14)
+    for index,row in bike_file_path.iterrows():
+
+        bike_coords = coordinates(bike_file_path['the_geom'].loc[index])
+        folium.PolyLine(bike_coords,color = get_color(row['DISPLAYROU'])).add_to(my_map) #creates the bike lane PolyLines
+
+    df = pd.read_csv(bike_accidents_path) # path file  for the heat map
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+
+
+    df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
+    df = df.dropna(subset = ["LATITUDE", "LONGITUDE"]) #we drop rows with NaN in longitutde and latitude 
+    X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
+    HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = 14).add_to(my_map) 
+
+    for index,row in bike_racks_path.iterrows():
+        latitude = bike_racks_path['Latitude'].loc[index]
+        longitude = bike_racks_path['Longitude'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude], color = 'pink').add_to(my_map)
+    
+    return my_map
+
+# heat map with bike lane data (PolyLines), and all active business lincenses (Circles in green) 
+def heat_map_with_bike_paths_active_business_licenses(bike_accidents_path = path, bike_file_path = full_bike_path, active_business_licenses_path = active_business_licenses_data):
+    my_map = folium.Map(location = [41.88451394892348, -87.68977117908742],tiles = 'openstreetmap', zoom_start =14)
+    for index,row in bike_file_path.iterrows():
+
+        bike_coords = coordinates(bike_file_path['the_geom'].loc[index])
+        folium.PolyLine(bike_coords,color = get_color(row['DISPLAYROU'])).add_to(my_map) #creates the bike lane PolyLines
+
+    df = pd.read_csv(bike_accidents_path) # path file  for the heat map
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+
+
+    df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
+    df = df.dropna(subset = ["LATITUDE", "LONGITUDE"]) #we drop rows with NaN in longitutde and latitude 
+    X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
+    HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = 14).add_to(my_map) 
+
+    for index,row in active_business_licenses_path.iterrows():
+        latitude = active_business_licenses_path['LATITUDE'].loc[index]
+        longitude = active_business_licenses_path['LONGITUDE'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude], color = 'green').add_to(my_map)
+    
+    return my_map
+
+
+# heat map with bike lane data (PolyLines), in-service divvy stations (Circles in blue), all bike racks (Circles in pink), and all active business lincenses (Circles in green) 
+def heat_map_with_bike_paths_and_inservice_divvy_stations_bike_racks_bike_paths_active_business_licenses(bike_accidents_path = path, bike_file_path = full_bike_path, divvy_path = divvy_chicago_data, bike_racks_path = bike_racks_data, active_business_licenses_path = active_business_licenses_data):
+    my_map = folium.Map(location = [41.88451394892348, -87.68977117908742],tiles = 'openstreetmap', zoom_start =14)
+    for index,row in bike_file_path.iterrows():
+
+        bike_coords = coordinates(bike_file_path['the_geom'].loc[index])
+        folium.PolyLine(bike_coords,color = get_color(row['DISPLAYROU'])).add_to(my_map) #creates the bike lane PolyLines
+
+    df = pd.read_csv(bike_accidents_path) # path file  for the heat map
+    df = df[df['FIRST_CRASH_TYPE'] == 'PEDALCYCLIST']
+
+
+    df = df[df['LONGITUDE'] != 0] # we get rid of false values for longitutde and latitude 
+    df = df.dropna(subset = ["LATITUDE", "LONGITUDE"]) #we drop rows with NaN in longitutde and latitude 
+    X = df.loc[:, ["LATITUDE", "LONGITUDE"]]
+    HeatMap(data = X[["LATITUDE", "LONGITUDE"]], radius = 14).add_to(my_map) 
+    divvy_in_service = divvy_path[divvy_path['Status'] == 'In Service'] # We add the divvy station data
+    for index,row in divvy_in_service.iterrows():
+        latitude = divvy_in_service['Latitude'].loc[index]
+        longitude = divvy_in_service['Longitude'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude]).add_to(my_map)
+
+    for index,row in bike_racks_path.iterrows():
+        latitude = bike_racks_path['Latitude'].loc[index]
+        longitude = bike_racks_path['Longitude'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude], color = 'pink').add_to(my_map)
+
+    for index,row in active_business_licenses_path.iterrows():
+        latitude = active_business_licenses_path['LATITUDE'].loc[index]
+        longitude = active_business_licenses_path['LONGITUDE'].loc[index]
+        folium.Circle(radius = 2, location = [latitude,longitude], color = 'green').add_to(my_map)
+    
+    return my_map
+
+#heat_map_with_bike_paths_and_inservice_divvy_stations_bike_racks_bike_paths_active_business_licenses() #unhash to show heat map
 
 #%%
 
