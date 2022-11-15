@@ -1,5 +1,5 @@
 # K-means-Cluster-Chicago-Bike-Accidents
-A basic K-Means CLustering algorithm for understanding bicycle accidents in Chicago
+A basic K-Means Clustering algorithm for understanding bicycle accidents in Chicago
 
 In this repo we bring together data sets avaliable in the Chicago Data Portal to see visualize geographic locations against reported bicycle accidents. 
 
